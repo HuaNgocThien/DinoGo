@@ -4,10 +4,16 @@ import {
   signOut as firebaseSignOut,
   deleteUser,
 } from "firebase/auth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  getDoc,
+  FieldValue,
+  Timestamp,
+  serverTimestamp,
+} from "firebase/firestore";
 import { auth, db } from "./fireBaseConfig";
-import { User } from "../types";
-
+import { UserDoc } from "../types";
 export interface SignUpParams {
   email: string;
   password: string;
@@ -20,6 +26,9 @@ export interface SignInParams {
   password: string;
 }
 
+type CreateUserPayload = Omit<UserDoc, "createdAt"> & {
+  createdAt: FieldValue;
+};
 //Services Signatures
 //Sign Up
 export const signUp = async ({
@@ -27,53 +36,68 @@ export const signUp = async ({
   password,
   fullName,
   phoneNumber,
-}: SignUpParams): Promise<User> => {
+}: SignUpParams): Promise<UserDoc> => {
+  const cleanEmail = email.toLowerCase().trim();
   const userCredential = await createUserWithEmailAndPassword(
     auth,
-    email,
+    cleanEmail,
     password,
   );
   const firebaseUser = userCredential.user;
 
-  const newUserProfile: User = {
+  const baseProfile = {
     id: firebaseUser.uid,
-    email: email.toLowerCase().trim(),
+    email: cleanEmail,
     fullName: fullName.trim(),
     phoneNumber: phoneNumber?.trim() || "",
-    role: "user",
-    createdAt: new Date().toISOString(),
+    role: "user" as const,
+  };
+  const payload: CreateUserPayload = {
+    ...baseProfile,
+    createdAt: serverTimestamp(),
   };
 
   try {
     const userDocRef = doc(db, "users", firebaseUser.uid);
-    await setDoc(userDocRef, newUserProfile);
+    await setDoc(userDocRef, payload);
 
-    return newUserProfile;
+    return {
+      ...baseProfile,
+      createdAt: Timestamp.now(),
+    };
   } catch (firestoreError) {
     await deleteUser(firebaseUser);
     throw firestoreError;
   }
 };
+//Get User Profile
+export const getUserProfile = async (
+  userId: string,
+): Promise<UserDoc | null> => {
+  const userDocRef = doc(db, "users", userId);
+  const docSnap = await getDoc(userDocRef);
+
+  if (!docSnap.exists()) {
+    return null;
+  }
+
+  return docSnap.data() as UserDoc;
+};
 //Sign In
 export const signIn = async ({
   email,
   password,
-}: SignInParams): Promise<User> => {
+}: SignInParams): Promise<UserDoc> => {
   const userCredential = await signInWithEmailAndPassword(
     auth,
     email.trim(),
     password,
   );
-  const { uid } = userCredential.user;
-
-  const userDocRef = doc(db, "users", uid);
-  const docSnap = await getDoc(userDocRef);
-
-  if (!docSnap.exists()) {
+  const userProfile = await getUserProfile(userCredential.user.uid);
+  if (!userProfile) {
     throw new Error("Không tìm thấy dữ liệu hồ sơ người dùng.");
   }
-
-  return docSnap.data() as User;
+  return userProfile;
 };
 //Sign Out
 export const signOutUser = async (): Promise<void> => {

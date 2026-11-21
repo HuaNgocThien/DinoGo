@@ -1,5 +1,7 @@
+import { Timestamp, FieldValue } from "firebase/firestore";
+
 export type Role = "admin" | "user";
-export type CarStatus = "available" | "rented" | "maintenance" | "inactive";
+export type CarStatus = "active" | "maintenance" | "inactive";
 export type BookingStatus =
   | "pending"
   | "confirmed"
@@ -9,25 +11,40 @@ export type BookingStatus =
   | "cancelled";
 export type Transmission = "automatic" | "manual";
 export type FuelType = "gasoline" | "diesel" | "electric" | "hybrid";
-
-export interface User {
+export type CarType =
+  | "sedan"
+  | "suv"
+  | "hatchback"
+  | "coupe"
+  | "convertible"
+  | "wagon"
+  | "van"
+  | "pickup";
+export interface UserDoc {
   id: string; // Firebase Auth UID
   email: string;
   fullName: string;
   phoneNumber?: string;
   role: Role;
-  createdAt: string;
+  createdAt: Timestamp;
+}
+
+export interface CarSlotDoc {
+  carId: string;
+  date: string;
+  bookingId: string;
+  userId: string;
+  createdAt: Timestamp;
 }
 
 export interface Car {
   id: string;
-
   name: string;
   brand: string;
   model: string;
   year: number;
 
-  type: string;
+  type: CarType;
   transmission: Transmission;
   fuelType: FuelType;
 
@@ -40,17 +57,26 @@ export interface Car {
   description: string;
   image: string[];
   status: CarStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 export interface Booking {
   id: string;
   carId: string;
   userId: string;
+  carSnapshot: {
+    name: string;
+    brand: string;
+    thumbnail: string[];
+    licensePlate: string;
+    cancelReason?: string;
+    cancelledBy?: Role;
+  };
 
   startDate: string;
   endDate: string;
+  slotDates: string[];
 
   pricePerDay: number;
   totalDays: number;
@@ -58,5 +84,6 @@ export interface Booking {
 
   status: BookingStatus;
 
-  createdAt: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
