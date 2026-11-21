@@ -2,6 +2,7 @@
   "expo": {
     "name": "DinoGo",
     "slug": "DinoGo",
+    "scheme": "dinogo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/logo/1024x1024.png",
@@ -22,7 +23,8 @@
       "favicon": "./assets/logo/1024x1024.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-image"
     ]
   }
 }
